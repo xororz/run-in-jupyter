@@ -14,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
-  let disposable = vscode.commands.registerCommand(
+  let disposable1 = vscode.commands.registerCommand(
     "run-in-jupyter.runAndMoveDown",
     () => {
       const currentBlockCode = getCurrentBlock();
@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(disposable1);
   context.subscriptions.push(disposable2);
 }
 
@@ -72,6 +72,7 @@ function insertEmptyLineAtEnd() {
       }
     });
 }
+
 function getCurrentBlock(moveDown: boolean = true): string {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -86,54 +87,41 @@ function getCurrentBlock(moveDown: boolean = true): string {
     return selectedText;
   }
   const currentLine = document.lineAt(cursorPosition.line);
-  if (
-    cursorPosition.line + 1 >= document.lineCount &&
-    !currentLine.isEmptyOrWhitespace
+  const indentLength = currentLine.firstNonWhitespaceCharacterIndex;
+  const indent = currentLine.text.slice(0, indentLength);
+  const pattern = new RegExp(
+    `^${indent}(\\s|else|elif|except|finally|\\)|\\]|\\})`
+  );
+  const empty = new RegExp(`\\s*#|^\\s*$`);
+  let blockText = currentLine.text;
+  let lineNumber;
+  for (
+    lineNumber = cursorPosition.line + 1;
+    lineNumber < document.lineCount;
+    lineNumber++
   ) {
-    if (moveDown) {
-      insertEmptyLineAtEnd();
-      moveToLineStart(cursorPosition.line + 1);
+    const line = document.lineAt(lineNumber);
+    if (empty.test(line.text)) {
+      continue;
     }
-    return currentLine.text;
-  }
-  const currentLineText = currentLine.text;
-  if (currentLineText.endsWith(":")) {
-    const currentLineIndent = currentLine.firstNonWhitespaceCharacterIndex;
-    let blockText = currentLineText;
-    let i;
-    for (i = cursorPosition.line + 1; i < document.lineCount; i++) {
-      const line = document.lineAt(i);
-      const lineText = line.text;
-      const lineIndent = line.firstNonWhitespaceCharacterIndex;
-      if (lineIndent <= currentLineIndent) {
-        break;
-      }
-      blockText = blockText + "\n" + lineText;
+    if (pattern.test(line.text)) {
+      blockText += `\n${line.text}`;
+    } else {
+      break;
     }
-    if (moveDown) {
-      if (i >= document.lineCount) {
-        insertEmptyLineAtEnd();
-        moveToLineStart(document.lineCount);
-      } else {
-        moveToLineStart(i);
-      }
-    }
-    return blockText;
   }
   if (moveDown) {
-    let i;
-    for (i = cursorPosition.line + 1; i < document.lineCount; i++) {
-      const line = document.lineAt(i);
-      if (!line.isEmptyOrWhitespace) {
-        moveToLineStart(i);
-        return currentLineText;
+    if (lineNumber === document.lineCount) {
+      const lastLine = document.lineAt(document.lineCount - 1);
+      if (empty.test(lastLine.text)) {
+        lineNumber--;
+      } else {
+        insertEmptyLineAtEnd();
       }
     }
-    if (!currentLine.isEmptyOrWhitespace) {
-      moveToLineStart(cursorPosition.line + 1);
-    }
+    moveToLineStart(lineNumber);
   }
-  return currentLineText;
+  return blockText;
 }
 
 function sendToJupyter(code: string) {

@@ -1,11 +1,18 @@
 {
   "name": "run-in-jupyter",
   "displayName": "Run in Jupyter",
-  "description": "",
-  "version": "0.0.1",
+  "description": "Execute selected code snippets or inferred code block from a Python file within a Jupyter environment.",
+  "version": "0.1.0",
+  "publisher": "xororz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xororz/run-in-jupyter.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
+  "icon": "assets/icon.png",
+  "license": "MIT",
   "categories": [
     "Other"
   ],

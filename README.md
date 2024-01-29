@@ -1,71 +1,20 @@
 # run-in-jupyter README
 
-This is the README for your extension "run-in-jupyter". After writing up a brief description, we recommend including the following sections.
+This VSCode extension enables the execution of selected code snippets or entire code blocks from a Python file within a Jupyter environment.
 
-## Features
+## How to use
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+1. <kbd>Shift</kbd>+<kbd>Enter</kbd> for **Running** the current block of code and make your cursor **Move Down** to the start of next block. So you can do this repeatedly.
+2. <kbd>Alt</kbd>+<kbd>Q</kbd> for **Just Running** the current block of code. This may be useful for testing some random-result code. You can customize the keybinding in VSCode.
+3. Select some code. Either 1 or 2 will run the selected code.
 
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-- `myExtension.enable`: Enable/disable this extension.
-- `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
+![示例GIF](./assets/demo.gif)
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+I used to be a Atom Hydrogen user, but Atom is down. This extension is a simple substitute for Hydrogen. It is not as powerful as Hydrogen, but it is enough for me to use.
 
-### 1.0.0
+### 0.1.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-- Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-- Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-- Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-- [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-- [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- Initial release
+- Support for running Python code in Jupyter notebooks

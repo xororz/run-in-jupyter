@@ -18,3 +18,7 @@ I used to be a Atom Hydrogen user, but Atom is down. This extension is a simple 
 
 - Initial release
 - Support for running Python code in Jupyter notebooks
+
+### 0.1.1
+
+- code block infer bug fix

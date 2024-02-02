@@ -92,7 +92,7 @@ function getCurrentBlock(moveDown: boolean = true): string {
   const pattern = new RegExp(
     `^${indent}(\\s|else|elif|except|finally|\\)|\\]|\\})`
   );
-  const empty = new RegExp(`\\s*#|^\\s*$`);
+  const empty = new RegExp(`^\\s*#|^\\s*$`);
   let blockText = currentLine.text;
   let lineNumber;
   for (

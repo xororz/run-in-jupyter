@@ -92,9 +92,32 @@ function getCurrentBlock(moveDown: boolean = true): string {
   const pattern = new RegExp(
     `^${indent}(\\s|else|elif|except|finally|\\)|\\]|\\})`
   );
+  const decoratorPattern = new RegExp(`^${indent}@`);
   const empty = new RegExp(`^\\s*#|^\\s*$`);
+  const functionPattern = new RegExp(`^${indent}def\\s`);
+  const classPattern = new RegExp(`^${indent}class\\s`);
   let blockText = currentLine.text;
   let lineNumber;
+  if (
+    functionPattern.test(currentLine.text) ||
+    classPattern.test(currentLine.text)
+  ) {
+    for (lineNumber = cursorPosition.line - 1; lineNumber >= 0; lineNumber--) {
+      const line = document.lineAt(lineNumber);
+      if (decoratorPattern.test(line.text)) {
+        blockText = `${line.text}\n${blockText}`;
+        continue;
+      } else {
+        if (empty.test(line.text)) {
+          continue;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+  let lastLineIsDecorator = false;
+  lastLineIsDecorator = decoratorPattern.test(currentLine.text);
   for (
     lineNumber = cursorPosition.line + 1;
     lineNumber < document.lineCount;
@@ -102,6 +125,13 @@ function getCurrentBlock(moveDown: boolean = true): string {
   ) {
     const line = document.lineAt(lineNumber);
     if (empty.test(line.text)) {
+      continue;
+    }
+    if (lastLineIsDecorator) {
+      if (!decoratorPattern.test(line.text)) {
+        lastLineIsDecorator = false;
+      }
+      blockText += `\n${line.text}`;
       continue;
     }
     if (pattern.test(line.text)) {

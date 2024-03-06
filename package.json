@@ -2,7 +2,7 @@
   "name": "run-in-jupyter",
   "displayName": "Run in Jupyter",
   "description": "Execute selected code snippets or inferred code block from a Python file within a Jupyter environment.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "xororz",
   "repository": {
     "type": "git",

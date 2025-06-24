@@ -71,16 +71,22 @@ function getCurrentBlock(moveDown: boolean = true): string {
   if (!editor) {
     return "";
   }
-  
+
   const document = editor.document;
   const selection = editor.selection;
-  
+
   // If there's an active selection, just return that
   if (!selection.isEmpty) {
     return document.getText(selection);
   }
 
   const cursorPosition = selection.active;
+  
+  // Validate cursor position is within document bounds
+  if (cursorPosition.line >= document.lineCount || cursorPosition.line < 0) {
+    return "";
+  }
+
   const currentLine = document.lineAt(cursorPosition.line);
   
   // Check if we're inside a multiline string
@@ -92,9 +98,7 @@ function getCurrentBlock(moveDown: boolean = true): string {
   // Original logic for non-string blocks
   const indentLength = currentLine.firstNonWhitespaceCharacterIndex;
   const indent = currentLine.text.slice(0, indentLength);
-  const pattern = new RegExp(
-    `^${indent}(\\s|else|elif|except|finally|\\)|\\]|\\})`
-  );
+  const pattern = new RegExp(`^${indent}(\\s|else|elif|except|finally|\\)|\\]|\\})`);
   const decoratorPattern = new RegExp(`^${indent}@`);
   const empty = new RegExp(`^\\s*#|^\\s*$`);
   const functionPattern = new RegExp(`^${indent}def\\s`);
@@ -109,107 +113,128 @@ function getCurrentBlock(moveDown: boolean = true): string {
       if (decoratorPattern.test(line.text)) {
         blockText = `${line.text}\n${blockText}`;
         continue;
+      } else if (empty.test(line.text)) {
+        continue;
       } else {
-        if (empty.test(line.text)) {
-          continue;
-        } else {
-          break;
-        }
+        break;
       }
     }
   }
 
   let lastLineIsDecorator = decoratorPattern.test(currentLine.text);
   for (lineNumber = cursorPosition.line + 1; lineNumber < document.lineCount; lineNumber++) {
-    const line = document.lineAt(lineNumber);
-    if (empty.test(line.text)) {
-      continue;
-    }
-    if (lastLineIsDecorator) {
-      if (!decoratorPattern.test(line.text)) {
-        lastLineIsDecorator = false;
+    try {
+      const line = document.lineAt(lineNumber);
+      if (empty.test(line.text)) {
+        continue;
       }
-      blockText += `\n${line.text}`;
-      continue;
-    }
-    if (pattern.test(line.text)) {
-      blockText += `\n${line.text}`;
-    } else {
+      if (lastLineIsDecorator) {
+        if (!decoratorPattern.test(line.text)) {
+          lastLineIsDecorator = false;
+        }
+        blockText += `\n${line.text}`;
+        continue;
+      }
+      if (pattern.test(line.text)) {
+        blockText += `\n${line.text}`;
+      } else {
+        break;
+      }
+    } catch (error) {
+      console.error(`Error accessing line ${lineNumber}:`, error);
       break;
     }
   }
 
   if (moveDown) {
-    if (lineNumber === document.lineCount) {
-      const lastLine = document.lineAt(document.lineCount - 1);
-      if (!empty.test(lastLine.text)) {
-        insertEmptyLineAtEnd();
+    try {
+      if (lineNumber >= document.lineCount) {
+        const lastLine = document.lineAt(document.lineCount - 1);
+        if (!empty.test(lastLine.text)) {
+          insertEmptyLineAtEnd();
+        }
+        lineNumber = document.lineCount - 1;
       }
+      moveToLineStart(lineNumber);
+    } catch (error) {
+      console.error("Error moving cursor:", error);
     }
-    moveToLineStart(lineNumber);
   }
 
   return blockText;
 }
-
 function isInsideMultilineString(document: vscode.TextDocument, position: vscode.Position): 
   { startLine: number, endLine: number, quoteType: string } | null {
-  
+    // Validate position is within document bounds
+  if (position.line >= document.lineCount || position.line < 0) {
+    return null;
+  }
+
   const tripleQuotes = ['"""', "'''"];
   let startLine: number | null = null;
   let endLine: number | null = null;
   let quoteType: string | null = null;
   
-  // Check current line first
-  const currentLineText = document.lineAt(position.line).text;
-  for (const q of tripleQuotes) {
-    const firstQuoteIndex = currentLineText.indexOf(q);
-    if (firstQuoteIndex >= 0 && firstQuoteIndex < position.character) {
-      const remainingText = currentLineText.substring(firstQuoteIndex + q.length);
-      if (remainingText.includes(q)) {
-        // Single line triple quote - not a multiline string
-        return null;
-      } else {
-        startLine = position.line;
-        quoteType = q;
+  try {
+    const tripleQuotes = ['"""', "'''"];
+    let startLine: number | null = null;
+    let endLine: number | null = null;
+    let quoteType: string | null = null;
+    
+    // Check current line first
+    const currentLineText = document.lineAt(position.line).text;
+    for (const q of tripleQuotes) {
+      const firstQuoteIndex = currentLineText.indexOf(q);
+      if (firstQuoteIndex >= 0 && firstQuoteIndex < position.character) {
+        const remainingText = currentLineText.substring(firstQuoteIndex + q.length);
+        if (remainingText.includes(q)) {
+          // Single line triple quote - not a multiline string
+          return null;
+        } else {
+          startLine = position.line;
+          quoteType = q;
+          break;
+        }
+      }
+    }
+    
+    // If not found on current line, search backwards
+    if (startLine === null) {
+      for (let line = position.line; line >= 0; line--) {
+        const lineText = document.lineAt(line).text;
+        for (const q of tripleQuotes) {
+          if (lineText.includes(q)) {
+            // Check if it's an opening quote (odd number of quotes before it)
+            const quotesBefore = (lineText.match(new RegExp(q, 'g')) || []).length;
+            if (quotesBefore % 2 === 1) {
+              startLine = line;
+              quoteType = q;
+              break;
+            }
+          }
+        }
+        if (quoteType !== null) break;
+      }
+    }
+    
+    if (quoteType === null || startLine === null) return null;
+    
+    // Find the closing quote
+    for (let line = startLine; line < document.lineCount; line++) {
+      const lineText = document.lineAt(line).text;
+      if (line > startLine && lineText.includes(quoteType)) {
+        endLine = line;
         break;
       }
     }
+    
+    if (endLine === null) return null;
+    
+    return { startLine, endLine, quoteType };
+    } catch (error) {
+    console.error("Error in isInsideMultilineString:", error);
+    return null;
   }
-  
-  // If not found on current line, search backwards
-  if (startLine === null) {
-    for (let line = position.line; line >= 0; line--) {
-      const lineText = document.lineAt(line).text;
-      for (const q of tripleQuotes) {
-        if (lineText.includes(q)) {
-          // Check if it's an opening quote (odd number of quotes before it)
-          const quotesBefore = (lineText.match(new RegExp(q, 'g')) || []).length;
-          if (quotesBefore % 2 === 1) {
-            startLine = line;
-            quoteType = q;
-            break;
-          }
-        }
-      }
-      if (quoteType !== null) break;
-    }
-  }
-  
-  if (quoteType === null || startLine === null) return null;
-  
-  // Find the closing quote
-  for (let line = startLine; line < document.lineCount; line++) {
-    const lineText = document.lineAt(line).text;
-    if (line > startLine && lineText.includes(quoteType)) {
-      endLine = line;
-      break;
-    }
-  }
-  
-  if (endLine === null) return null;
-  
-  return { startLine, endLine, quoteType };
 }
 
 function handleMultilineString(
@@ -219,18 +244,24 @@ function handleMultilineString(
 ): string {
   let blockText = '';
   
-  for (let line = info.startLine; line <= info.endLine; line++) {
-    blockText += document.lineAt(line).text + '\n';
-  }
-  
-  if (moveDown) {
-    const nextLine = info.endLine + 1;
-    if (nextLine < document.lineCount) {
-      moveToLineStart(nextLine);
-    } else {
-      insertEmptyLineAtEnd();
-      moveToLineStart(nextLine);
+  try {
+    for (let line = info.startLine; line <= info.endLine; line++) {
+      if (line >= 0 && line < document.lineCount) {
+        blockText += document.lineAt(line).text + '\n';
+      }
     }
+    
+    if (moveDown) {
+      const nextLine = info.endLine + 1;
+      if (nextLine < document.lineCount) {
+        moveToLineStart(nextLine);
+      } else {
+        insertEmptyLineAtEnd();
+        moveToLineStart(nextLine);
+      }
+    }
+  } catch (error) {
+    console.error("Error in handleMultilineString:", error);
   }
   
   return blockText.trim();
